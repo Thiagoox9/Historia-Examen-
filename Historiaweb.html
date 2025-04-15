@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exámen de Historia</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f1f1f1;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .container, .auth, .ranking {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+    .question {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .options button {
+      display: block;
+      width: 100%;
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: #e0e0e0;
+      cursor: pointer;
+    }
+    .options button.correct { background-color: #a5d6a7; }
+    .options button.incorrect { background-color: #ef9a9a; }
+    #nextBtn, #showRankingBtn, #backToQuizBtn {
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: #2196f3;
+      color: white;
+      cursor: pointer;
+    }
+    .hidden { display: none; }
+    input {
+      width: 100%;
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button.auth-btn {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      font-size: 1rem;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      background: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.5rem;
+      border-bottom: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth" id="auth">
+    <h2>Iniciar sesión</h2>
+    <input type="text" id="username" placeholder="Nombre de usuario">
+    <input type="password" id="password" placeholder="Contraseña">
+    <button class="auth-btn" onclick="login()">Entrar</button>
+    <p style="margin:1rem 0">o</p>
+    <h3>Registrarse</h3>
+    <input type="text" id="regUsername" placeholder="Nuevo usuario">
+    <input type="password" id="regPassword" placeholder="Nueva contraseña">
+    <button class="auth-btn" onclick="register()">Registrarse</button>
+  </div>
+
+  <div class="container hidden" id="quiz">
+    <h2 id="welcome"></h2>
+    <div class="question" id="question"></div>
+    <div class="options" id="options"></div>
+    <button id="nextBtn" onclick="loadQuestion()">Siguiente</button>
+    <button id="showRankingBtn" onclick="showRanking()">Ver Ranking</button>
+  </div>
+
+  <div class="ranking hidden" id="ranking">
+    <h2>Ranking de Puntajes</h2>
+    <table id="rankingTable"></table>
+    <button id="backToQuizBtn" onclick="backToQuiz()">Volver al Quiz</button>
+  </div>
+
+  <script>
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    const questions = [
+      { question: "¿Qué impulsó la expansión europea entre 1400 y 1700?", options: ["La revolución industrial", "Exploración y expansión", "Guerras mundiales"], answer: 1 },
+      { question: "¿Qué consecuencias tuvo la llegada de los europeos a América?", options: ["Unión de culturas", "Aislamiento", "Explotación y sometimiento"], answer: 2 },
+      { question: "¿Por dónde llegaron los primeros humanos a América?", options: ["Océano Atlántico", "Estrecho de Bering", "África"], answer: 1 },
+      { question: "¿Qué permitió la expansión marítima en Europa Occidental?", options: ["El uso del GPS", "Nuevas técnicas de navegación", "La pólvora"], answer: 1 },
+      { question: "¿Qué buscaba Colón al viajar hacia el oeste?", options: ["Un nuevo continente", "Una ruta a Asia", "La Antártida"], answer: 1 },
+      { question: "¿Qué dividió el mundo entre España y Portugal?", options: ["Tratado de Versalles", "Tratado de Tordesillas", "Pacto Ibérico"], answer: 1 },
+      { question: "¿Qué facilitó la conquista de América?", options: ["Conflictos internos indígenas", "Superioridad numérica", "Paz entre pueblos"], answer: 0 },
+      { question: "¿Qué modelo urbano seguían las ciudades coloniales?", options: ["Estilo francés", "Leyes de Indias", "Arquitectura moderna"], answer: 1 },
+      { question: "¿Qué actividad económica fue central en la colonia?", options: ["Agricultura", "Minería de metales preciosos", "Pesca"], answer: 1 },
+      { question: "¿Qué provocó el monopolio comercial español?", options: ["Contrabando", "Más comercio", "Libre mercado"], answer: 0 },
+      { question: "¿Qué fue la encomienda?", options: ["Una ley de comercio", "Sistema de tributo indígena", "Un tipo de moneda"], answer: 1 },
+      { question: "¿Quiénes eran los criollos?", options: ["Nacidos en España", "Nacidos en América", "Esclavos africanos"], answer: 1 },
+      { question: "¿Qué eran los cabildos?", options: ["Iglesias coloniales", "Gobiernos locales", "Tribunales penales"], answer: 1 },
+      { question: "¿Qué crearon los Borbones en 1776?", options: ["Virreinato del Perú", "Virreinato del Río de la Plata", "Cabildos Abiertos"], answer: 1 },
+      { question: "¿Qué se destacó en Buenos Aires en el período colonial?", options: ["Pesca", "Ganadería y comercio de cueros", "Minería"], answer: 1 },
+      { question: "¿Qué guerras debilitaron a España?", options: ["Invasiones mongolas", "Guerras napoleónicas", "Guerras púnicas"], answer: 1 },
+      { question: "¿Qué fue una causa clave de la revolución americana?", options: ["Caída del imperio inca", "Malestar con los peninsulares", "Inflación"], answer: 1 },
+      { question: "¿Qué sucedió durante la Revolución de Mayo?", options: ["Se declaró la independencia", "Se destituyó al virrey", "Se fundó el Congreso de Tucumán"], answer: 1 },
+      { question: "¿Quién fue el primer presidente de la Primera Junta?", options: ["Castelli", "Saavedra", "Belgrano"], answer: 1 },
+      { question: "¿Qué acontecimiento ocurrió en 1816?", options: ["La Revolución Francesa", "La Independencia de Argentina", "La creación del Virreinato del Río de la Plata"], answer: 1 },
+      { question: "¿Qué fue la Asamblea del Año XIII?", options: ["Declaración de independencia", "Creación del Virreinato", "Abolición de la Inquisición"], answer: 2 },
+      { question: "¿Qué ocurrió en la Batalla de Cepeda (1820)?", options: ["Victoria de los federales", "Constitución de 1819", "Renuncia de Rivadavia"], answer: 0 },
+      { question: "¿Qué ideas defendía la Logia Lautaro?", options: ["Federalismo", "Independencia y Constitución", "Monarquía constitucional"], answer: 1 }
+    ];
+
+    let current = 0;
+    let score = 0;
+    let currentUser = null;
+
+    function updateLocalStorage() {
+      localStorage.setItem('users', JSON.stringify(users));
+    }
+
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function register() {
+      const user = document.getElementById('regUsername').value;
+      const pass = document.getElementById('regPassword').value;
+      if (users[user]) return alert('Usuario ya registrado.');
+      users[user] = {
+        password: await hashPassword(pass),
+        score: 0
+      };
+      updateLocalStorage();
+      alert('Registrado con éxito. Ahora podés iniciar sesión.');
+    }
+
+    async function login() {
+      const user = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+      const hashed = await hashPassword(pass);
+      if (!users[user] || users[user].password !== hashed) return alert('Credenciales incorrectas.');
+      currentUser = user;
+      document.getElementById('auth').classList.add('hidden');
+      document.getElementById('quiz').classList.remove('hidden');
+      document.getElementById('welcome').innerText = `¡Bienvenido, ${user}!`;
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      document.getElementById('nextBtn').style.display = 'none';
+      const q = questions[current];
+      document.getElementById('question').innerText = q.question;
+      const optionsDiv = document.getElementById('options');
+      optionsDiv.innerHTML = '';
+      q.options.forEach((option, index) => {
+        const btn = document.createElement('button');
+        btn.innerText = option;
+        btn.onclick = () => checkAnswer(index);
+        optionsDiv.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(index) {
+      const buttons = document.querySelectorAll('.options button');
+      buttons.forEach((btn, i) => {
+        btn.disabled = true;
+        if (i === questions[current].answer) {
+          btn.classList.add('correct');
+          score++;
+        } else if (i === index) {
+          btn.classList.add('incorrect');
+        }
+      });
+      document.getElementById('nextBtn').style.display = 'inline-block';
+      current++;
+      if (current >= questions.length) {
+        users[currentUser].score = Math.max(score, users[currentUser].score);
+        updateLocalStorage();
+        setTimeout(() => alert(`¡Fin del quiz! Puntaje: ${score}/${questions.length}`), 200);
+        score = 0;
+        current = 0;
+      }
+    }
+
+    function showRanking() {
+      const table = document.getElementById('rankingTable');
+      const ranking = Object.entries(users).sort(([, a], [, b]) => b.score - a.score);
+      table.innerHTML = '<tr><th>Puesto</th><th>Usuario</th><th>Puntaje</th></tr>' +
+        ranking.map(([user, data], i) => `<tr><td>${i+1}</td><td>${user}</td><td>${data.score}</td></tr>`).join('');
+      document.getElementById('quiz').classList.add('hidden');
+      document.getElementById('ranking').classList.remove('hidden');
+    }
+
+    function backToQuiz() {
+      document.getElementById('ranking').classList.add('hidden');
+      document.getElementById('quiz').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
